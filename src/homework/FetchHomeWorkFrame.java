@@ -1,0 +1,43 @@
+package homework;
+
+import beans.LoggedInUser;
+import java.awt.BorderLayout;
+import java.awt.Container;
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+
+public class FetchHomeWorkFrame extends JFrame {
+
+    Container container = null;
+    public FetchHomeWorkFrame(int courseID) {
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    UIManager.setLookAndFeel(UIManager
+                            .getSystemLookAndFeelClassName());
+                } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+                }
+                JFrame frame = new JFrame("Homework Retrival");
+                JScrollPane pane = new JScrollPane(
+                        JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                        JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+                frame.setLayout(new BorderLayout());
+                frame.add(pane);
+                JPanel panel = new FetchHomeWork().getHomeWorkPanelByAttemptID(122);
+                JScrollPane scroller = new JScrollPane(panel);
+                frame.getContentPane().add(scroller, BorderLayout.CENTER);
+                frame.pack();
+                frame.setLocationRelativeTo(null);
+                frame.setSize(600, 400);
+                frame.setResizable(true);
+                frame.setVisible(true);
+            }
+        });
+    }
+}

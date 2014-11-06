@@ -1,0 +1,214 @@
+
+--drop table if exists users CASCADE;
+
+ create table if not exists users(
+id bigserial primary key,
+username varchar not null,
+password varchar not null,
+role int not null default 2,
+last_login_date timestamp not null default now()
+ );
+
+--drop table if exists professors CASCADE;
+ create table if not exists professors(
+id bigserial primary key,
+name varchar not null,
+user_id bigint not null references users
+ );
+
+ 
+--drop table if exists students CASCADE;
+ create table if not exists students(
+id bigserial primary key,
+name varchar not null,
+level int not null,
+type int not null default 1,
+user_id bigint not null references users
+ );
+
+--drop table if exists courses CASCADE;
+ create table if not exists courses(
+id bigserial primary key,
+course_name varchar not null,
+token varchar not null,
+start_date timestamp not null,
+end_date timestamp not null,
+total_students bigint not null default 0,
+level int not null ,
+max_enrollments int not null,
+professor_id bigint not null references professors,
+teaching_assistant_id bigint not null references students
+ );
+
+--drop table if exists enrollments CASCADE;
+create table if not exists enrollments (
+id bigserial primary key,
+student_id bigint not null references students,
+course_id bigint not null references courses 
+);
+
+CREATE OR REPLACE FUNCTION update_student_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  update courses set total_students = total_students +1 where id = NEW.course_id;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER enrollements_bi BEFORE INSERT ON enrollments FOR EACH ROW  EXECUTE PROCEDURE update_student_count();
+
+CREATE OR REPLACE FUNCTION update_student_type()
+RETURNS TRIGGER AS $$
+BEGIN
+  update students set type = 2 where id = NEW.teaching_assistant_id;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER courses_bi BEFORE INSERT OR UPDATE ON courses FOR EACH ROW  EXECUTE PROCEDURE update_student_type();
+
+
+
+ --drop table if exists topics;
+
+ create table if not exists topics(
+id bigserial primary key,
+name varchar not null,
+ );
+ 
+ create table course_topics (
+ id bigserial primary key,
+ course_id bigint not null references courses,
+ topic_id bigint not null references topics
+ );
+ 
+ 
+ create table alerts (
+id bigserial not null primary key,
+professor_id bigint not null,
+teaching_assistant_id bigint not null,
+course_id bigint not null,
+conflicting_course_id bigint not null
+ );
+ 
+ CREATE TABLE IF NOT EXISTS QUESTIONS
+ (ID BIGSERIAL PRIMARY KEY,
+ TOPIC_ID BIGINT NOT NULL references topics,
+ CONTENT TEXT,
+ EXPLANATION TEXT,
+ DIFFICULTY_LEVEL BIGINT DEFAULT 1,
+ QUESTION_HINT VARCHAR(100) DEFAULT '-',
+ TYPE BIGINT DEFAULT 0);
+ 
+ CREATE TABLE IF NOT EXISTS ANSWERS(
+ ID BIGSERIAL PRIMARY KEY,
+ QUESTION_ID BIGINT NOT NULL REFERENCES QUESTIONS,
+ CONTENT TEXT,EXPLANATION TEXT,
+ CORRECTNESS_FLAG BOOLEAN DEFAULT 'y',
+ SET_ID BIGINT NOT NULL);
+ 
+ CREATE TABLE IF NOT EXISTS PARAMETERS(
+ ID BIGSERIAL PRIMARY KEY,
+ QUESTION_ID BIGINT NOT NULL REFERENCES QUESTIONS,
+ SET_ID BIGINT NOT NULL,
+ VALUE VARCHAR(20) DEFAULT '-',
+ INDEX INT NOT NULL DEFAULT 1
+ );
+ 
+ CREATE TABLE IF NOT EXISTS HOMEWORKS(
+ ID BIGSERIAL PRIMARY KEY,
+ NAME VARCHAR NOT NULL,
+ SCORING_METHOD BIGINT DEFAULT 1,
+ START_DATE TIMESTAMP,END_DATE TIMESTAMP,
+ RANDOMIZED_SEED BIGINT NOT NULL,
+ NO_OF_RETRIES BIGINT DEFAULT 0,
+ POINTS_PER_QUESTION BIGINT DEFAULT 4,
+ PENALTY_PER_QUESTION BIGINT DEFAULT 4,
+ DIFFICULTY_LEVEL BIGINT DEFAULT 0,
+ COURSE_ID BIGINT NOT NULL REFERENCES COURSES); 
+ 
+ CREATE TABLE IF NOT EXISTS EXAM_QUESTIONS(
+ ID BIGSERIAL PRIMARY KEY,
+ QUESTION_ID BIGINT NOT NULL REFERENCES QUESTIONS,
+ ANSWER1_ID BIGINT NOT NULL REFERENCES ANSWERS,
+ ANSWER2_ID BIGINT NOT NULL REFERENCES ANSWERS,
+ ANSWER3_ID BIGINT NOT NULL REFERENCES ANSWERS,
+ ANSWER4_ID BIGINT NOT NULL REFERENCES ANSWERS,
+ QUESTION_INDEX INT NOT NULL REFERENCES ANSWERS,
+ SELECTED_ANSWER BIGINT NOT NULL REFERENCES ANSWERS,
+ ATTEMPT_ID BIGINT NOT NULL REFERENCES ATTEMPTS);
+ 
+ CREATE TABLE IF NOT EXISTS HOMEWORK_QUESTIONS(
+ ID BIGSERIAL PRIMARY KEY,
+ HOMEWORK_ID BIGINT NOT NULL REFERENCES HOMEWORKS,
+ QUESTION_ID BIGINT NOT NULL REFERENCES QUESTIONS);
+ 
+CREATE UNIQUE INDEX homework_qustions_i
+  ON homework_questions
+  USING btree
+  (homework_id, question_id);
+ 
+ CREATE TABLE IF NOT EXISTS ATTEMPTS(
+ ID BIGSERIAL PRIMARY KEY,
+ STUDENT_ID BIGINT NOT NULL REFERENCES STUDENTS,
+ HOMEWORK_ID BIGINT NOT NULL REFERENCES HOMEWORKS,
+ SUBMISSION_TIME TIMESTAMP,
+ SCORE_OBTAINED INT,
+ MAXIMUM_SCORE INT
+ );
+ 
+ CREATE TABLE IF NOT EXISTS ENROLLMENTS(
+ ID BIGSERIAL PRIMARY KEY,
+ STUDENT_ID BIGINT NOT NULL,
+ COURSE_ID BIGINT NOT NULL,
+ CONSTRAINT student_exists FOREIGN KEY(STUDENT_ID) REFERENCES STUDENTS(ID),
+ CONSTRAINT course_exists FOREIGN KEY(COURSE_ID) REFERENCES COURSES(ID)
+ );
+ 
+ 
+ CREATE TABLE IF NOT EXISTS PROFESSORS(
+ ID BIGSERIAL PRIMARY KEY,
+ NAME VARCHAR NOT NULL,USER_ID BIGINT NOT NULL,
+ CONSTRAINT user_exists FOREIGN KEY(USER_ID) REFERENCES USERS );
+ 
+ 
+ 
+create table if not exists textbooks (
+id bigserial not null primary key,
+title varchar not null,
+author varchar not null,
+ISBNNO varchar not null,
+course_id bigint not null references courses 
+);
+
+create table if not exists chapters(
+id bigserial not null primary key,
+title varchar not null,
+textbook_id bigint references textbooks
+);
+
+create table if not exists sections (
+id bigserial not null primary key,
+content text not null,
+chapter_id bigint not null references chapters,
+parent_section_id bigint references sections
+);
+ 
+ CREATE TABLE scores
+(
+  id bigserial NOT NULL,
+  student_id bigint NOT NULL,
+  homework_id bigint NOT NULL,
+  score integer NOT NULL DEFAULT 0,
+  maximum_score integer NOT NULL DEFAULT 0,
+  CONSTRAINT scores_pkey PRIMARY KEY (id),
+  CONSTRAINT scores_homework_id_fkey FOREIGN KEY (homework_id)
+      REFERENCES homeworks (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT scores_student_id_fkey FOREIGN KEY (student_id)
+      REFERENCES students (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+ 
+ 
+ 
